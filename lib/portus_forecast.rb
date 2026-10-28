@@ -26,9 +26,14 @@ module PortusForecast
 
   Row = Struct.new(:time, :wave_height, :peak_period, :mean_period, :direction_degrees,
                    :wind_gust, :wind_direction_degrees, keyword_init: true) do
-    # @return [String] propagation direction as a compass label
+    # @return [Numeric] direction waves come from (0 = N, clockwise)
+    def direction_from_degrees
+      (direction_degrees + 180) % 360
+    end
+
+    # @return [String] direction waves come from as a compass label
     def direction
-      Compass.from_degrees(direction_degrees)
+      Compass.from_degrees(direction_from_degrees)
     end
 
     # @return [String] direction the wind blows from as a compass label

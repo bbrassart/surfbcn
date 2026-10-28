@@ -3,8 +3,10 @@
 
 Static page showing the hourly wave forecast (SIWANA model, Puertos del
 Estado) for **Boya de Barcelona II** (code `712018020`): significant wave
-height, peak and mean period, and mean propagation direction as a 16-point
-compass label.
+height, peak and mean period, and the direction waves come from as a 16-point
+compass label and degrees (0° = north, clockwise). The API's propagation
+direction is rotated by 180° for display; wind direction already indicates
+where the wind comes from and is left unchanged.
 
 A GitHub Actions workflow runs every hour, fetches the data from
 `https://poem.puertos.es/portus/ForecastData/Siwana/forecast`, renders
