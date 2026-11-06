@@ -18,11 +18,13 @@ end
 
 begin
   # Defaults to Playa del Bogatell, Barcelona.
-  wind = PortusForecast.fetch_wind(lat: ENV.fetch('WIND_LAT', '41.3945'),
-                                   lon: ENV.fetch('WIND_LON', '2.2065'))
-  rows.each { |row| row.wind_gust, row.wind_direction_degrees = wind[row.time.to_i] }
+  weather = PortusForecast.fetch_weather(lat: ENV.fetch('WIND_LAT', '41.3945'),
+                                         lon: ENV.fetch('WIND_LON', '2.2065'))
+  rows.each do |row|
+    weather.fetch(row.time.to_i, {}).each { |field, value| row[field] = value }
+  end
 rescue PortusForecast::Error, SystemCallError, Timeout::Error, SocketError => e
-  warn "Failed to fetch wind, rendering without it: #{e.message}"
+  warn "Failed to fetch weather, rendering without it: #{e.message}"
 end
 
 FileUtils.mkdir_p(output_dir)

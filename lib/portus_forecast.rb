@@ -24,8 +24,27 @@ module PortusForecast
     end
   end
 
+  # Maps WMO weather codes (as returned by Open-Meteo) to a simplified sky state.
+  module Weather
+    LABELS = { sunny: 'Sunny', cloudy: 'Cloudy', rainy: 'Rainy' }.freeze
+
+    # @param code [Integer, nil] WMO weather code
+    # @return [Symbol, nil] :sunny (clear / mainly clear), :cloudy (partly cloudy,
+    #   overcast, fog) or :rainy (any precipitation: drizzle, rain, snow, showers, storms)
+    def self.from_code(code)
+      return nil if code.nil?
+
+      case code.to_i
+      when 0, 1 then :sunny
+      when 2, 3, 45, 48 then :cloudy
+      else :rainy
+      end
+    end
+  end
+
   Row = Struct.new(:time, :wave_height, :peak_period, :mean_period, :direction_degrees,
-                   :wind_gust, :wind_direction_degrees, keyword_init: true) do
+                   :wind_gust, :wind_direction_degrees, :weather_code, :precipitation,
+                   keyword_init: true) do
     # @return [Numeric] direction waves come from (0 = N, clockwise)
     def direction_from_degrees
       (direction_degrees + 180) % 360
@@ -39,6 +58,11 @@ module PortusForecast
     # @return [String] direction the wind blows from as a compass label
     def wind_direction
       Compass.from_degrees(wind_direction_degrees)
+    end
+
+    # @return [Symbol, nil] :sunny, :cloudy or :rainy
+    def weather
+      Weather.from_code(weather_code)
     end
   end
 
@@ -65,23 +89,28 @@ module PortusForecast
 
     # @param lat [Numeric]
     # @param lon [Numeric]
-    # @return [Hash{Integer => Array(Float, Float)}] [gust knots, direction degrees] keyed by epoch seconds
-    def fetch_wind(lat:, lon:)
+    # @return [Hash{Integer => Hash}] hourly weather keyed by epoch seconds, see #parse_weather
+    def fetch_weather(lat:, lon:)
       uri = URI(OPEN_METEO_URL)
       uri.query = URI.encode_www_form(latitude: lat, longitude: lon,
-                                      hourly: 'wind_gusts_10m,wind_direction_10m',
+                                      hourly: 'wind_gusts_10m,wind_direction_10m,weather_code,precipitation',
                                       wind_speed_unit: 'kn', timeformat: 'unixtime')
-      parse_wind(get(uri))
+      parse_weather(get(uri))
     end
 
     # @param body [String] JSON returned by the Open-Meteo forecast endpoint
-    # @return [Hash{Integer => Array(Float, Float)}]
-    def parse_wind(body)
+    # @return [Hash{Integer => Hash}] keyed by epoch seconds, each value having
+    #   :wind_gust (knots), :wind_direction_degrees, :weather_code (WMO) and :precipitation (mm)
+    def parse_weather(body)
       hourly = JSON.parse(body)['hourly']
       raise Error, 'Unexpected Open-Meteo payload' unless hourly.is_a?(Hash) && hourly['time'].is_a?(Array)
 
-      values = Array(hourly['wind_gusts_10m']).zip(Array(hourly['wind_direction_10m']))
-      hourly['time'].zip(values).to_h
+      hourly['time'].each_with_index.to_h do |epoch, i|
+        [epoch, { wind_gust: Array(hourly['wind_gusts_10m'])[i],
+                  wind_direction_degrees: Array(hourly['wind_direction_10m'])[i],
+                  weather_code: Array(hourly['weather_code'])[i],
+                  precipitation: Array(hourly['precipitation'])[i] }]
+      end
     rescue JSON::ParserError => e
       raise Error, "Invalid Open-Meteo JSON: #{e.message}"
     end

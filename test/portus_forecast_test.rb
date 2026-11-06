@@ -72,22 +72,41 @@ class ParseTest < Minitest::Test
   end
 end
 
-class ParseWindTest < Minitest::Test
+class WeatherTest < Minitest::Test
+  def test_maps_wmo_codes
+    assert_nil PortusForecast::Weather.from_code(nil)
+    [0, 1].each { |code| assert_equal :sunny, PortusForecast::Weather.from_code(code) }
+    [2, 3, 45, 48].each { |code| assert_equal :cloudy, PortusForecast::Weather.from_code(code) }
+    [51, 61, 65, 71, 80, 95, 99].each { |code| assert_equal :rainy, PortusForecast::Weather.from_code(code) }
+  end
+end
+
+class ParseWeatherTest < Minitest::Test
   BODY = '{"hourly":{"time":[1792285200,1792288800],' \
-         '"wind_gusts_10m":[12.4,15.0],"wind_direction_10m":[250,262]}}'.freeze
+         '"wind_gusts_10m":[12.4,15.0],"wind_direction_10m":[250,262],' \
+         '"weather_code":[1,61],"precipitation":[0.0,1.2]}}'.freeze
 
-  def test_parses_wind_by_epoch
-    wind = PortusForecast.parse_wind(BODY)
+  def test_parses_weather_by_epoch
+    weather = PortusForecast.parse_weather(BODY)
 
-    assert_equal({ 1_792_285_200 => [12.4, 250], 1_792_288_800 => [15.0, 262] }, wind)
+    assert_equal({ 1_792_285_200 => { wind_gust: 12.4, wind_direction_degrees: 250, weather_code: 1, precipitation: 0.0 },
+                   1_792_288_800 => { wind_gust: 15.0, wind_direction_degrees: 262, weather_code: 61, precipitation: 1.2 } },
+                 weather)
+  end
+
+  def test_tolerates_missing_series
+    weather = PortusForecast.parse_weather('{"hourly":{"time":[1792285200]}}')
+
+    assert_equal({ 1_792_285_200 => { wind_gust: nil, wind_direction_degrees: nil, weather_code: nil, precipitation: nil } },
+                 weather)
   end
 
   def test_rejects_missing_forecast
-    assert_raises(PortusForecast::Error) { PortusForecast.parse_wind('{"error":true}') }
+    assert_raises(PortusForecast::Error) { PortusForecast.parse_weather('{"error":true}') }
   end
 
   def test_rejects_invalid_json
-    assert_raises(PortusForecast::Error) { PortusForecast.parse_wind('nope') }
+    assert_raises(PortusForecast::Error) { PortusForecast.parse_weather('nope') }
   end
 end
 
@@ -96,6 +115,8 @@ class RenderTest < Minitest::Test
     rows = PortusForecast.parse(ParseTest::BODY)
     rows.first.wind_gust = 12.4
     rows.first.wind_direction_degrees = 250.0
+    rows.first.weather_code = 61
+    rows.first.precipitation = 1.24
     html = PortusForecast.render(rows: rows, station_name: 'Boya <Test>',
                                  generated_at: Time.at(1_792_290_000))
 
@@ -104,7 +125,10 @@ class RenderTest < Minitest::Test
     assert_includes html, '<th>Swell direction</th>'
     assert_includes html, '<td title="81°">E (81°)</td>'
     assert_includes html, '<td>12 kn WSW (250°)</td>'
-    assert_includes html, '<td>–</td>'
+    assert_includes html, '<th>Weather</th>'
+    refute_includes html, '<th>Rain</th>'
+    assert_includes html, '<td class="rainy" title="Rainy">1.2 mm</td>'
+    assert_equal 2, html.scan('<td>–</td>').size
     assert_includes html, 'Boya &lt;Test&gt;'
     assert_includes html, '<strong id="sun-times" aria-live="polite">Sunrise and sunset: loading...</strong>'
     assert_equal 2, html.scan('<tr data-epoch=').size

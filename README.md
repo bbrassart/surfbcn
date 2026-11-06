@@ -15,8 +15,11 @@ themselves every 15 minutes.
 
 Wind gusts (knots, 10 m) and direction for **Playa del Bogatell** come from the
 free [Open-Meteo](https://open-meteo.com/) forecast API (no key needed;
-override the point with `WIND_LAT` / `WIND_LON`). If the request fails the
-column shows "–".
+override the point with `WIND_LAT` / `WIND_LON`). The same request provides
+the **Weather** column: forecast precipitation in mm for the hour, with the
+cell coloured by sky state derived from the WMO weather code (yellow = sunny,
+gray = cloudy, dark blue = rainy). If the request fails these columns
+show "–".
 
 ## Requirements
 

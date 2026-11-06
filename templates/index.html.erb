@@ -15,6 +15,9 @@
     tr.past { color: #aaa; }
     tr.midnight { background: #d3d3d3 }
     tr.now { background: #ceecff; font-weight: bold; }
+    td.sunny { background: #ffe066; }
+    td.cloudy { background: #d3d3d3; }
+    td.rainy { background: #0b2e6b; color: #fff; }
     footer { margin-top: 1rem; font-size: 0.85rem; color: #666; }
   </style>
 </head>
@@ -32,6 +35,7 @@
         <th>Short period Tm02</th>
         <th>Swell direction</th>
         <th>Wind</th>
+        <th>Weather</th>
       </tr>
     </thead>
     <tbody>
@@ -43,6 +47,7 @@
         <td><%= format('%.1f', row.mean_period) %></td>
         <td title="<%= row.direction_from_degrees.round %>°"><%= row.direction %> (<%= row.direction_from_degrees.round %>°)</td>
         <td><% if row.wind_gust && row.wind_direction_degrees %><%= row.wind_gust.round %> kn <%= row.wind_direction %> (<%= row.wind_direction_degrees.round %>°)<% else %>–<% end %></td>
+        <td<% if row.weather %> class="<%= row.weather %>" title="<%= PortusForecast::Weather::LABELS[row.weather] %>"<% end %>><% if row.precipitation %><%= format('%.1f', row.precipitation) %> mm<% else %>–<% end %></td>
       </tr>
 <% end -%>
     </tbody>
@@ -50,7 +55,7 @@
   </div>
   <footer>
     Source: <a href="https://portus.puertos.es/">Puertos del Estado – Portus</a>.
-    Wind (Playa del Bogatell): <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>
+    Wind, weather and rain (Playa del Bogatell): <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>
   </footer>
   <script>
     fetch('https://api.sunrise-sunset.org/v2?lat=41.3851&lng=2.1734')
