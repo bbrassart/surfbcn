@@ -18,6 +18,9 @@
     td.sunny { background: #ffe066; }
     td.cloudy { background: #d3d3d3; }
     td.rainy { background: #0b2e6b; color: #fff; }
+    .webcam { margin-top: 1.5rem; }
+    .webcam-grid { display: grid; gap: 1rem; }
+    .webcam img { display: block; max-width: 100%; height: auto; }
     footer { margin-top: 1rem; font-size: 0.85rem; color: #666; }
   </style>
 </head>
@@ -53,8 +56,19 @@
     </tbody>
   </table>
   </div>
+  <section class="webcam">
+    <h2>Webcams</h2>
+    <div class="webcam-grid">
+      <img src="https://www.bcasa.cat:8888/imatgesaraplatgesbcn/camara6.jpg"
+           alt="Live webcam view of the beach (camera 6)" loading="lazy">
+      <img src="https://www.bcasa.cat:8888/imatgesaraplatgesbcn/camara1.jpg"
+           alt="Live webcam view of the beach (camera 1)" loading="lazy">
+    </div>
+    <p><a href="http://cnbadalona.cat/cam/garbi.php" target="_blank" rel="noopener">Badalona webcam (Club Natació Badalona) ↗</a></p>
+  </section>
   <footer>
     Source: <a href="https://portus.puertos.es/">Puertos del Estado – Portus</a>.
+    Webcams: <a href="https://www.bcasa.cat/">Barcelona Cicle de l'Aigua (BCASA)</a>.
     Wind, weather and rain (Playa del Bogatell): <a href="https://open-meteo.com/">Weather data by Open-Meteo.com</a>
   </footer>
   <script>
@@ -76,6 +90,14 @@
       .catch(function () {
         document.getElementById('sun-times').textContent = 'Sunrise and sunset unavailable';
       });
+
+    // The webcams are still snapshots updated server-side: reload them every minute.
+    document.querySelectorAll('.webcam img').forEach(function (img) {
+      var src = img.src;
+      setInterval(function () {
+        img.src = src + '?t=' + Date.now();
+      }, 60000);
+    });
 
     // Grey out past hours and highlight the current one in the visitor's browser.
     var now = Date.now() / 1000;
